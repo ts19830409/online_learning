@@ -1,0 +1,11 @@
+[
+{
+  "model": "lms.course",
+  "pk": 1,
+  "fields": {
+    "title": "Django курс",
+    "preview": "",
+    "description": "Основы Django"
+  }
+}
+]
