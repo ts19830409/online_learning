@@ -95,8 +95,10 @@ AUTH_PASSWORD_VALIDATORS = [
 	},
 ]
 
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
+
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+}
 
 LANGUAGE_CODE = 'en-us'
 
