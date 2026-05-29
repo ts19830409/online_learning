@@ -9,6 +9,7 @@ class CourseViewSet(viewsets.ModelViewSet):
 	queryset = Course.objects.all()
 	serializer_class = CourseSerializer
 	
+	
 	def get_permissions(self):
 		if self.action == 'create':
 			self.permission_classes = [IsAuthenticated, ~IsModerator]
@@ -22,7 +23,12 @@ class CourseViewSet(viewsets.ModelViewSet):
 	
 	def perform_create(self, serializer):
 		serializer.save(owner=self.request.user)
-
+	
+	def get_queryset(self):
+		user = self.request.user
+		if user.groups.filter(name='Модераторы').exists():
+			return Course.objects.all()
+		return Course.objects.filter(owner=user)
 
 class LessonListCreateView(generics.ListCreateAPIView):
 	queryset = Lesson.objects.all()
@@ -36,7 +42,12 @@ class LessonListCreateView(generics.ListCreateAPIView):
 	
 	def perform_create(self, serializer):
 		serializer.save(owner=self.request.user)
-
+	
+	def get_queryset(self):
+		user = self.request.user
+		if user.groups.filter(name='Модераторы').exists():
+			return Lesson.objects.all()
+		return Lesson.objects.filter(owner=user)
 
 class LessonRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 	queryset = Lesson.objects.all()
@@ -50,3 +61,9 @@ class LessonRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 		else:
 			self.permission_classes = [IsAuthenticated]
 		return [permission() for permission in self.permission_classes]
+	
+	def get_queryset(self):
+		user = self.request.user
+		if user.groups.filter(name='Модераторы').exists():
+			return Lesson.objects.all()
+		return Lesson.objects.filter(owner=user)
