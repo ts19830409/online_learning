@@ -6,6 +6,10 @@ from users.views import ProfileView
 from users.views import PaymentListView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from users.views import SubscriptionView
+from rest_framework.permissions import AllowAny
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+from users.views import PaymentCreateView
 
 router = DefaultRouter()
 router.register(r'courses', CourseViewSet)
@@ -29,4 +33,23 @@ urlpatterns += [
 
 urlpatterns += [
     path('api/subscription/', SubscriptionView.as_view(), name='subscription'),
+]
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="LMS API",
+        default_version='v1',
+        description="API for online learning platform",
+    ),
+    public=True,
+    permission_classes=[AllowAny],
+)
+
+urlpatterns += [
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+]
+
+urlpatterns += [
+    path('api/payment/create/', PaymentCreateView.as_view(), name='payment-create'),
 ]
