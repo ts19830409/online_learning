@@ -12,8 +12,7 @@ from users.models import Subscription
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from lms.services import create_stripe_product, create_stripe_price, create_stripe_session
-from django.conf import settings
-
+import stripe
 
 class ProfileView(generics.RetrieveUpdateAPIView):
 	queryset = User.objects.all()
@@ -56,12 +55,11 @@ class PaymentCreateView(APIView):
 	def post(self, request):
 		course_id = request.data.get('course_id')
 		course = get_object_or_404(Course, pk=course_id)
+		amount = float(course.price) if course.price else 0
 		
 		# Создаём продукт и цену в Stripe
 		stripe_product_id = create_stripe_product(course)
-		stripe_price_id = create_stripe_price(stripe_product_id, float(course.price)) if hasattr(course,
-		                                                                                         'price') else create_stripe_price(
-			stripe_product_id, 1000)
+		stripe_price_id = create_stripe_price(stripe_product_id, amount)
 		
 		# Создаём сессию оплаты
 		session_id, payment_url = create_stripe_session(
@@ -70,16 +68,43 @@ class PaymentCreateView(APIView):
 			cancel_url='http://127.0.0.1:8000/',
 		)
 		
-		# Сохраняем платёж в базе
+		# Сохраняем платёж
 		payment = Payment.objects.create(
 			user=request.user,
 			course=course,
-			amount=course.price if hasattr(course, 'price') else 1000,
+			amount=amount,
 			payment_method='transfer',
 			stripe_session_id=session_id,
+			stripe_product_id=stripe_product_id,
+			stripe_price_id=stripe_price_id,
+			payment_url=payment_url,
+			status='pending',
 		)
 		
 		return Response({
 			'payment_id': payment.pk,
 			'payment_url': payment_url,
+			'status': payment.status,
 		})
+
+
+class PaymentStatusView(APIView):
+	def get(self, request, payment_id):
+		payment = get_object_or_404(Payment, pk=payment_id)
+		
+		if not payment.stripe_session_id:
+			return Response({'error': 'Нет ID сессии Stripe'}, status=400)
+		
+		try:
+			session = stripe.checkout.Session.retrieve(payment.stripe_session_id)
+			payment.status = session.payment_status
+			payment.save()
+			return Response({
+				'payment_id': payment.pk,
+				'status': payment.status,
+				'amount': str(payment.amount),
+			})
+		except stripe.error.StripeError as e:
+			return Response({'error': str(e)}, status=400)
+
+

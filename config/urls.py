@@ -10,6 +10,8 @@ from rest_framework.permissions import AllowAny
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from users.views import PaymentCreateView
+from users.views import PaymentStatusView
+
 
 router = DefaultRouter()
 router.register(r'courses', CourseViewSet)
@@ -52,4 +54,8 @@ urlpatterns += [
 
 urlpatterns += [
     path('api/payment/create/', PaymentCreateView.as_view(), name='payment-create'),
+]
+
+urlpatterns += [
+    path('api/payment/<int:payment_id>/status/', PaymentStatusView.as_view(), name='payment-status'),
 ]

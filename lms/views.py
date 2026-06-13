@@ -4,13 +4,13 @@ from lms.models import Course, Lesson
 from lms.serializers import CourseSerializer, LessonSerializer
 from users.permissions import IsModerator, IsOwner
 from lms.paginators import CoursePaginator
+from lms.tasks import send_course_update_email
 
 
 class CourseViewSet(viewsets.ModelViewSet):
 	pagination_class = CoursePaginator
 	queryset = Course.objects.all()
 	serializer_class = CourseSerializer
-	
 	
 	def get_permissions(self):
 		if self.action == 'create':
@@ -31,6 +31,12 @@ class CourseViewSet(viewsets.ModelViewSet):
 		if user.groups.filter(name='Модераторы').exists():
 			return Course.objects.all()
 		return Course.objects.filter(owner=user)
+	
+	def perform_update(self, serializer):
+		course = serializer.save()
+		# Отправляем письма подписчикам
+		send_course_update_email.delay(course.pk)
+
 
 class LessonListCreateView(generics.ListCreateAPIView):
 	pagination_class = CoursePaginator
@@ -51,6 +57,7 @@ class LessonListCreateView(generics.ListCreateAPIView):
 		if user.groups.filter(name='Модераторы').exists():
 			return Lesson.objects.all()
 		return Lesson.objects.filter(owner=user)
+
 
 class LessonRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 	queryset = Lesson.objects.all()
