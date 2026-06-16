@@ -4,12 +4,16 @@ from django.conf import settings
 from django.utils import timezone
 from users.models import Subscription, User
 from lms.models import Course
+from django.utils import timezone
 
 
 @shared_task
 def send_course_update_email(course_id):
 	"""Отправляет письма подписчикам при обновлении курса"""
 	course = Course.objects.get(pk=course_id)
+	if course.updated_at and (timezone.now() - course.updated_at).seconds < 4 * 3600:
+		return
+	
 	subscribers = Subscription.objects.filter(course=course)
 	emails = [sub.user.email for sub in subscribers]
 	
