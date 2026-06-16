@@ -1,26 +1,22 @@
-
-
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from celery.schedules import crontab
+
 load_dotenv(override=True)
 
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+SECRET_KEY = os.getenv('SECRET_KEY')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7)j-ml6(65$7@jts+dz^nis4e+@4nux0+@go^de38#5gz^d&e@'
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
 
-# SECURITY WARNING: don't run with debug turned on in production!
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
+
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
-# Application definition
 
 INSTALLED_APPS = [
 	'django.contrib.admin',
@@ -32,6 +28,8 @@ INSTALLED_APPS = [
 	'rest_framework',
 	'users',
 	'lms',
+	'django_filters',
+	'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -63,22 +61,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.getenv('NAME'),
-        'USER': os.getenv('USER'),
-        'PASSWORD': os.getenv('PASSWORD'),
-        'HOST': os.getenv('HOST'),
-        'PORT': os.getenv('PORT'),
-    }
+	'default': {
+		'ENGINE': 'django.db.backends.postgresql_psycopg2',
+		'NAME': os.getenv('NAME'),
+		'USER': os.getenv('USER'),
+		'PASSWORD': os.getenv('PASSWORD'),
+		'HOST': os.getenv('HOST'),
+		'PORT': os.getenv('PORT'),
+	}
 }
-
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
 	{
@@ -95,21 +87,35 @@ AUTH_PASSWORD_VALIDATORS = [
 	},
 ]
 
-
-REST_FRAMEWORK = {
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
-}
-
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Vladivostok'
 
 USE_I18N = True
 
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
 STATIC_URL = 'static/'
 AUTH_USER_MODEL = 'users.User'
+
+REST_FRAMEWORK = {
+	'DEFAULT_AUTHENTICATION_CLASSES': [
+		'rest_framework_simplejwt.authentication.JWTAuthentication',
+	],
+	'DEFAULT_PERMISSION_CLASSES': [
+		'rest_framework.permissions.IsAuthenticated',
+	],
+	'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+}
+
+
+CELERY_TIMEZONE = 'Asia/Vladivostok'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+
+CELERY_BEAT_SCHEDULE = {
+	'deactivate-inactive-users': {
+		'task': 'lms.tasks.deactivate_inactive_users',
+		'schedule': crontab(hour=0, minute=0),  # каждый день в полночь
+	},
+}
