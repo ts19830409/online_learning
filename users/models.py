@@ -46,6 +46,11 @@ class Payment(models.Model):
 	amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Сумма оплаты')
 	payment_method = models.CharField(max_length=20, choices=[('cash', 'Наличные'), ('transfer', 'Перевод на счет')],
 	                                  verbose_name='Способ оплаты')
+	stripe_session_id = models.CharField(max_length=255, blank=True, null=True, verbose_name='ID сессии Stripe')
+	stripe_product_id = models.CharField(max_length=255, blank=True, null=True, verbose_name='ID продукта Stripe')
+	stripe_price_id = models.CharField(max_length=255, blank=True, null=True, verbose_name='ID цены Stripe')
+	payment_url = models.URLField(blank=True, null=True, verbose_name='Ссылка на оплату')
+	status = models.CharField(max_length=20, default='pending', verbose_name='Статус платежа')
 	
 	class Meta:
 		verbose_name = 'Платёж'
@@ -53,3 +58,16 @@ class Payment(models.Model):
 	
 	def __str__(self):
 		return f'{self.user.email} - {self.amount} руб.'
+
+
+class Subscription(models.Model):
+	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+	course = models.ForeignKey('lms.Course', on_delete=models.CASCADE, related_name='subscriptions')
+	
+	class Meta:
+		unique_together = ['user', 'course']
+		verbose_name = 'Подписка'
+		verbose_name_plural = 'Подписки'
+	
+	def __str__(self):
+		return f'{self.user.email} - {self.course.title}'
