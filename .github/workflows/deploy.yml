@@ -1,0 +1,82 @@
+name: CI/CD for LMS
+
+on:
+  push:
+    branches: [ develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install django djangorestframework django-filter djangorestframework-simplejwt drf-yasg django-cors-headers celery redis requests python-dotenv pillow psycopg2-binary stripe gunicorn
+
+      - name: Run migrations
+        env:
+          SECRET_KEY: test-secret-key
+          NAME: test_db
+          USER: postgres
+          PASSWORD: postgres
+          HOST: localhost
+          PORT: 5432
+        run: |
+          python manage.py makemigrations
+          python manage.py migrate
+
+      - name: Run tests
+        env:
+          SECRET_KEY: test-secret-key
+          NAME: test_db
+          USER: postgres
+          PASSWORD: postgres
+          HOST: localhost
+          PORT: 5432
+        run: |
+          python manage.py test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 158.160.131.232
+          username: cloud-adm
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /home/cloud-adm/online_learning
+            git pull origin develop
+            source /home/cloud-adm/venv/bin/activate
+            pip install django djangorestframework django-filter djangorestframework-simplejwt drf-yasg django-cors-headers celery redis requests python-dotenv pillow psycopg2-binary stripe gunicorn
+            python manage.py makemigrations
+            python manage.py migrate
+            python manage.py collectstatic --noinput
+            sudo systemctl restart gunicorn

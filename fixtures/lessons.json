@@ -1,0 +1,13 @@
+[
+{
+  "model": "lms.lesson",
+  "pk": 1,
+  "fields": {
+    "title": "Урок 1",
+    "description": "Введение в Django",
+    "preview": "",
+    "video_link": "https://youtube.com/watch?v=example",
+    "course": 1
+  }
+}
+]
